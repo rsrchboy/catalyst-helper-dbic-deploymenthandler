@@ -1,53 +1,131 @@
 package Catalyst::Helper::DBIC::DeploymentHandler;
 
-# ABSTRACT: The great new Catalyst::Helper::DBIC::DeploymentHandler!
+# ABSTRACT: Create a script/myapp_dbicdh.pl to help manage your DBIC deployments
 
-use Moose;
 use namespace::autoclean;
 use common::sense;
 
+use File::Spec;
 
-__PACKAGE__->meta->make_immutable;
+sub mk_stuff {
+    my ($self, $helper, $args) = @_;
+
+    #my $app = lc $helper->{app};
+
+    my $base = $helper->{base};
+    my $app  = lc $helper->{app};
+
+    $app =~ s/::/_/g;
+
+    my $script = File::Spec->catfile($base, 'script', $app.'_dbicdh.pl');
+    $helper->render_file('dbicdh', $script);
+    chmod 0755, $script;
+}
+
 
 1;
 
-__END__
+__DATA__
+
+__pod__
 
 =head1 SYNOPSIS
 
-In C<dist.ini>:
-
-    [NoSmartCommentsTests]
+./script/myapp_create.pl DBIC::DeploymentHandler
 
 =head1 DESCRIPTION
 
-This is an extension of L<Dist::Zilla::Plugin::InlineFiles>, providing the
-following file:
+This is a Catalyst helper module that builds a
+L<DBIx::Class::DeploymentHandler> script for you.
 
-    xt/release/no-smart-comments.t - test to ensure no Smart::Comments
+=head1 TODO
 
-=head1 NOTE
+Schemas not named MyApp::DB::Schema.
 
-The name of this plugin has turned out to be somewhat misleading, I'm afraid:
-we don't actually test for the _existance_ of smart comments, rather we
-ensure that Smart::Comment is not used by any file checked.
+Determine the db type automatically
+
+=head1 AUTHOR
+
+While I put together this helper module, this code is largely based on the
+information (and code) in
+L<DBIx::Class::DeploymentHandler::Manual::CatalystIntro>.  Any errors are mine.
 
 =head1 SEE ALSO
 
-L<Smart::Comments>, L<Test::NoSmartComments>
-
-=head1 BUGS
-
-All complex software has bugs lurking in it, and this module is no exception.
-
-Please report any bugs to
-"bug-Catalyst::Helper::DBIC::DeploymentHandler@rt.cpan.org",
-or through the web interface at <http://rt.cpan.org>.
-
-Patches and pull requests through GitHub are most welcome; our page and repo
-(same URI):
-
-    https://github.com/RsrchBoy/Catalyst::Helper::DBIC::DeploymentHandler
+L<DBIx::Class::DeploymentHandler>, L<DBIx::Class>,
+L<DBIx::Class::DeploymentHandler::Manual::CatalystIntro>
 
 =cut
 
+__dbicdh__
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use v5.10;
+
+use aliased 'DBIx::Class::DeploymentHandler' => 'DH';
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use [% app %]::DB::Schema;
+use Config::JFDI;
+
+my $config = Config::JFDI->new( name => '[% app %]' );
+my $config_hash  = $config->get;
+my $connect_info = $config_hash->{'Model::DB'}{'connect_info'};
+my $schema       = [% app %]::DB::Schema->connect($connect_info);
+
+my $dh = DH->new({
+  schema           => $schema,
+  script_directory => "$FindBin::Bin/../dbicdh",
+  databases        => 'MySQL',
+});
+
+sub prep_install { $dh->prepare_install }
+sub install {
+  prep_install();
+  $dh->install;
+}
+
+sub prep_upgrade {
+  $dh->prepare_deploy;
+  $dh->prepare_upgrade;
+}
+
+sub upgrade {
+  die 'Please update the version in Schema.pm'
+    if $dh->version_storage->version_rs->search({version => $dh->schema_version})->count;
+
+  die 'We only support positive integers for versions around these parts.'
+    unless $dh->schema_version =~ /^\d+$/;
+
+  prep_upgrade();
+  $dh->upgrade;
+}
+
+sub current_version {
+  say $dh->database_version;
+}
+
+sub help {
+say <<'OUT';
+usage:
+  install
+  upgrade
+  current-version
+OUT
+}
+
+help unless $ARGV[0];
+
+given ( $ARGV[0] ) {
+
+    when ('install')         { install()         }
+    when ('prepare-install') { prep_install()    }
+    when ('upgrade')         { upgrade()         }
+    when ('prepare-upgrade') { prep_upgrade()    }
+    when ('current-version') { current_version() }
+}
+
+1;
