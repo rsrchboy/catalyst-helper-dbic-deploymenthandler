@@ -15,3 +15,4 @@ META.yml
 *.bak
 MYMETA.*
 .build
+Catalyst-Helper-DBIC-DeploymentHandler-*

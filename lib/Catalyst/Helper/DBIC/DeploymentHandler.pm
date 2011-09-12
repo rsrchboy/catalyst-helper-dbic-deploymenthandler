@@ -25,10 +25,6 @@ sub mk_stuff {
 
 1;
 
-__DATA__
-
-__pod__
-
 =head1 SYNOPSIS
 
 ./script/myapp_create.pl DBIC::DeploymentHandler
@@ -38,25 +34,29 @@ __pod__
 This is a Catalyst helper module that builds a
 L<DBIx::Class::DeploymentHandler> script for you.
 
+VERY EARLY CODE: things may yet change, but shouldn't impact older versions
+(unless you regenerate the script).
+
 =head1 TODO
 
 Schemas not named MyApp::DB::Schema.
 
 Determine the db type automatically
 
-=head1 AUTHOR
-
-While I put together this helper module, this code is largely based on the
-information (and code) in
-L<DBIx::Class::DeploymentHandler::Manual::CatalystIntro>.  Any errors are mine.
-
 =head1 SEE ALSO
 
 L<DBIx::Class::DeploymentHandler>, L<DBIx::Class>,
 L<DBIx::Class::DeploymentHandler::Manual::CatalystIntro>
 
+=head1 CODE LINEAGE
+
+While I put together this helper module, this code is largely based on the
+information (and code) in
+L<DBIx::Class::DeploymentHandler::Manual::CatalystIntro>.  Any errors are mine.
+
 =cut
 
+__DATA__
 __dbicdh__
 #!/usr/bin/env perl
 
